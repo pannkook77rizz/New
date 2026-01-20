@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<script>
+    const staticUrl = 'https://pannkook77rizz.github.io/New/data.html';
+    const wsUrl = 'wss://ws.rexzy.online';
+
+    // Fetch initial text from the static URL
+    fetch(staticUrl)
+        .then(response => response.text())
+        .then(data => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(data, 'text/html');
+            const text = doc.body.innerText.trim();
+            document.body.innerText = text;
+            localStorage.setItem('lastMessage', text);
+        })
+        .catch(error => {
+            console.error('Error fetching initial data:', error);
+            // Fallback to last message if fetch fails
+            const lastMessage = localStorage.getItem('lastMessage');
+            if (lastMessage) {
+                document.body.innerText = lastMessage;
+            }
+        });
+
+    // Connect to WebSocket for updates
+    const ws = new WebSocket(wsUrl);
+
+    ws.onmessage = function(event) {
+        const message = event.data.trim();
+        document.body.innerText = message;
+        localStorage.setItem('lastMessage', message);
+    };
+</script>
+</body>
+</html>
