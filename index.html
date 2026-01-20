@@ -1,32 +1,24 @@
 <!DOCTYPE html>
-
-<html>
-
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
 <body>
-
 <script>
+    function connect() {
+        const ws = new WebSocket('wss://ws.rexzy.online');
 
-const ws = new WebSocket("wss://ws.rexzy.online");
+        ws.onmessage = function(event) {
+            document.body.innerText = event.data;
+        };
 
-ws.onmessage = (event) => {
-
-    try {
-
-        const data = JSON.parse(event.data);
-
-        document.body.innerText = data.text || event.data; // replace with new message
-
-    } catch {
-
-        document.body.innerText = event.data; // fallback if not JSON
-
+        ws.onclose = function() {
+            setTimeout(connect, 1000); // Reconnect after 1 second
+        };
     }
 
-};
-
+    connect();
 </script>
-
 </body>
-
 </html>
-
